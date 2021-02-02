@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"math"
 	"os"
 	"reflect"
@@ -14,6 +15,7 @@ import (
 	"runtime"
 	"runtime/debug"
 	"strings"
+	"testing"
 	"time"
 	"unicode"
 	"unicode/utf8"
@@ -82,14 +84,17 @@ func ObjectsAreEqual(expected, actual interface{}) bool {
 }
 
 // Allow to look into any unexported field
-var equalOption = cmp.Exporter(func(reflect.Type) bool { return true })
+var equalOptions = []cmp.Option{
+	cmp.Exporter(func(reflect.Type) bool { return true }),
+	cmpopts.IgnoreTypes((*testing.T)(nil)),
+}
 
 func equal(expected, actual interface{}) bool {
 	if _, ok := expected.(reflect.Type); ok {
 		// go-cmp dies on type comparisons
 		return reflect.DeepEqual(expected, actual)
 	}
-	return cmp.Equal(expected, actual, equalOption)
+	return cmp.Equal(expected, actual, equalOptions...)
 }
 
 // ObjectsAreEqualValues gets whether two objects are equal, or if their
@@ -358,7 +363,7 @@ func Equal(t TestingT, expected, actual interface{}, msgAndArgs ...interface{}) 
 	}
 
 	if !ObjectsAreEqual(expected, actual) {
-		diff := cmp.Diff(expected, actual, equalOption)
+		diff := cmp.Diff(expected, actual, equalOptions...)
 		expected, actual = formatUnequalValues(expected, actual)
 		return Fail(t, fmt.Sprintf("Not equal: \n"+
 			"expected: %s\n"+
