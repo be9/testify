@@ -81,14 +81,15 @@ func ObjectsAreEqual(expected, actual interface{}) bool {
 	return bytes.Equal(exp, act)
 }
 
+// Allow to look into any unexported field
+var equalOption = cmp.Exporter(func(reflect.Type) bool { return true })
+
 func equal(expected, actual interface{}) bool {
 	if _, ok := expected.(reflect.Type); ok {
 		// go-cmp dies on type comparisons
 		return reflect.DeepEqual(expected, actual)
 	}
-	return cmp.Equal(expected, actual,
-		// Allow to look into any unexported field
-		cmp.Exporter(func(reflect.Type) bool { return true }))
+	return cmp.Equal(expected, actual, equalOption)
 }
 
 // ObjectsAreEqualValues gets whether two objects are equal, or if their
@@ -357,7 +358,7 @@ func Equal(t TestingT, expected, actual interface{}, msgAndArgs ...interface{}) 
 	}
 
 	if !ObjectsAreEqual(expected, actual) {
-		diff := cmp.Diff(expected, actual)
+		diff := cmp.Diff(expected, actual, equalOption)
 		expected, actual = formatUnequalValues(expected, actual)
 		return Fail(t, fmt.Sprintf("Not equal: \n"+
 			"expected: %s\n"+
