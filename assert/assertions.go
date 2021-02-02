@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/google/go-cmp/cmp"
 	"math"
 	"os"
 	"reflect"
@@ -60,9 +61,14 @@ func ObjectsAreEqual(expected, actual interface{}) bool {
 		return expected == actual
 	}
 
+	if _, ok := expected.(reflect.Type); ok {
+		// go-cmp dies on type comparisons
+		return reflect.DeepEqual(expected, actual)
+	}
+
 	exp, ok := expected.([]byte)
 	if !ok {
-		return reflect.DeepEqual(expected, actual)
+		return cmp.Equal(expected, actual)
 	}
 
 	act, ok := actual.([]byte)

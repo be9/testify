@@ -2147,9 +2147,23 @@ func ExampleComparisonAssertionFunc() {
 	}
 }
 
+type Foo struct {
+	Foo string
+	Bar string
+}
+
+func (foo *Foo) Name() string {
+	return foo.Foo + " " + foo.Bar
+}
+
 func TestComparisonAssertionFunc(t *testing.T) {
 	type iface interface {
 		Name() string
+	}
+
+	t2 := &Foo{
+		Foo: "foo",
+		Bar: "bar",
 	}
 
 	tests := []struct {
@@ -2158,13 +2172,13 @@ func TestComparisonAssertionFunc(t *testing.T) {
 		got       interface{}
 		assertion ComparisonAssertionFunc
 	}{
-		{"implements", (*iface)(nil), t, Implements},
-		{"isType", (*testing.T)(nil), t, IsType},
-		{"equal", t, t, Equal},
-		{"equalValues", t, t, EqualValues},
-		{"notEqualValues", t, nil, NotEqualValues},
-		{"exactly", t, t, Exactly},
-		{"notEqual", t, nil, NotEqual},
+		{"implements", (*iface)(nil), t2, Implements},
+		{"isType", (*Foo)(nil), t2, IsType},
+		{"equal", t2, t2, Equal},
+		{"equalValues", t2, t2, EqualValues},
+		{"notEqualValues", t2, nil, NotEqualValues},
+		{"exactly", t2, t2, Exactly},
+		{"notEqual", t2, nil, NotEqual},
 		{"notContains", []int{1, 2, 3}, 4, NotContains},
 		{"subset", []int{1, 2, 3, 4}, []int{2, 3}, Subset},
 		{"notSubset", []int{1, 2, 3, 4}, []int{0, 3}, NotSubset},
