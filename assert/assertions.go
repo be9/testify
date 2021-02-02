@@ -83,10 +83,15 @@ func ObjectsAreEqual(expected, actual interface{}) bool {
 	return bytes.Equal(exp, act)
 }
 
-// Allow to look into any unexported field
 var equalOptions = []cmp.Option{
+	// Allow to look into any unexported field
 	cmp.Exporter(func(reflect.Type) bool { return true }),
+	// Ignore attributes with type *testing.T
 	cmpopts.IgnoreTypes((*testing.T)(nil)),
+	// Use reflect.DeepEqual for types
+	cmp.Comparer(func (t1, t2 reflect.Type) bool {
+		return reflect.DeepEqual(t1, t2)
+	}),
 }
 
 func equal(expected, actual interface{}) bool {
