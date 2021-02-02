@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"math"
 	"os"
 	"reflect"
@@ -13,6 +15,7 @@ import (
 	"runtime"
 	"runtime/debug"
 	"strings"
+	"testing"
 	"time"
 	"unicode"
 	"unicode/utf8"
@@ -60,9 +63,14 @@ func ObjectsAreEqual(expected, actual interface{}) bool {
 		return expected == actual
 	}
 
+	if _, ok := expected.(reflect.Type); ok {
+		// go-cmp dies on type comparisons
+		return reflect.DeepEqual(expected, actual)
+	}
+
 	exp, ok := expected.([]byte)
 	if !ok {
-		return reflect.DeepEqual(expected, actual)
+		return equal(expected, actual)
 	}
 
 	act, ok := actual.([]byte)
@@ -73,6 +81,25 @@ func ObjectsAreEqual(expected, actual interface{}) bool {
 		return exp == nil && act == nil
 	}
 	return bytes.Equal(exp, act)
+}
+
+var equalOptions = []cmp.Option{
+	// Allow to look into any unexported field
+	cmp.Exporter(func(reflect.Type) bool { return true }),
+	// Ignore attributes with type *testing.T
+	cmpopts.IgnoreTypes((*testing.T)(nil)),
+	// Use reflect.DeepEqual for types
+	cmp.Comparer(func (t1, t2 reflect.Type) bool {
+		return reflect.DeepEqual(t1, t2)
+	}),
+}
+
+func equal(expected, actual interface{}) bool {
+	if _, ok := expected.(reflect.Type); ok {
+		// go-cmp dies on type comparisons
+		return reflect.DeepEqual(expected, actual)
+	}
+	return cmp.Equal(expected, actual, equalOptions...)
 }
 
 // ObjectsAreEqualValues gets whether two objects are equal, or if their
@@ -89,7 +116,7 @@ func ObjectsAreEqualValues(expected, actual interface{}) bool {
 	expectedValue := reflect.ValueOf(expected)
 	if expectedValue.IsValid() && expectedValue.Type().ConvertibleTo(actualType) {
 		// Attempt comparison after type conversion
-		return reflect.DeepEqual(expectedValue.Convert(actualType).Interface(), actual)
+		return equal(expectedValue.Convert(actualType).Interface(), actual)
 	}
 
 	return false
@@ -177,7 +204,7 @@ func isTest(name, prefix string) bool {
 }
 
 func messageFromMsgAndArgs(msgAndArgs ...interface{}) string {
-	if len(msgAndArgs) == 0 || msgAndArgs == nil {
+	if len(msgAndArgs) == 0 {
 		return ""
 	}
 	if len(msgAndArgs) == 1 {
@@ -341,7 +368,7 @@ func Equal(t TestingT, expected, actual interface{}, msgAndArgs ...interface{}) 
 	}
 
 	if !ObjectsAreEqual(expected, actual) {
-		diff := diff(expected, actual)
+		diff := cmp.Diff(expected, actual, equalOptions...)
 		expected, actual = formatUnequalValues(expected, actual)
 		return Fail(t, fmt.Sprintf("Not equal: \n"+
 			"expected: %s\n"+
