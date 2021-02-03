@@ -6,8 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"math"
 	"os"
 	"reflect"
@@ -21,8 +19,11 @@ import (
 	"unicode/utf8"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/pmezard/go-difflib/difflib"
-	yaml "gopkg.in/yaml.v3"
+	"google.golang.org/protobuf/testing/protocmp"
+	"gopkg.in/yaml.v3"
 )
 
 //go:generate sh -c "cd ../_codegen && go build && cd - && ../_codegen/_codegen -output-package=assert -template=assertion_format.go.tmpl"
@@ -63,11 +64,6 @@ func ObjectsAreEqual(expected, actual interface{}) bool {
 		return expected == actual
 	}
 
-	if _, ok := expected.(reflect.Type); ok {
-		// go-cmp dies on type comparisons
-		return reflect.DeepEqual(expected, actual)
-	}
-
 	exp, ok := expected.([]byte)
 	if !ok {
 		return equal(expected, actual)
@@ -89,16 +85,13 @@ var equalOptions = []cmp.Option{
 	// Ignore attributes with type *testing.T
 	cmpopts.IgnoreTypes((*testing.T)(nil)),
 	// Use reflect.DeepEqual for types
-	cmp.Comparer(func (t1, t2 reflect.Type) bool {
+	cmp.Comparer(func(t1, t2 reflect.Type) bool {
 		return reflect.DeepEqual(t1, t2)
 	}),
+	protocmp.Transform(),
 }
 
 func equal(expected, actual interface{}) bool {
-	if _, ok := expected.(reflect.Type); ok {
-		// go-cmp dies on type comparisons
-		return reflect.DeepEqual(expected, actual)
-	}
 	return cmp.Equal(expected, actual, equalOptions...)
 }
 
