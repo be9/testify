@@ -354,11 +354,21 @@ func TestStringEqual(t *testing.T) {
 		msgAndArgs []interface{}
 		want       string
 	}{
-		{equalWant: "hi, \nmy name is", equalGot: "what,\nmy name is", want: "\tassertions.go:\\d+: \n\t+Error Trace:\t\n\t+Error:\\s+Not equal:\\s+\n\\s+expected: \"hi, \\\\nmy name is\"\n\\s+actual\\s+: \"what,\\\\nmy name is\"\n\\s+Diff:\n\\s+-+ Expected\n\\s+\\++ Actual\n\\s+@@ -1,2 \\+1,2 @@\n\\s+-hi, \n\\s+\\+what,\n\\s+my name is"},
+		{
+			equalWant: "hi, \nmy name is",
+			equalGot:  "what,\nmy name is",
+			want: "\tassertions.go:\\d+: \n\t+Error Trace:\t\n\t+Error:\\s+Not equal:\\s+\n" +
+				"\\s+expected: \"hi, \\\\nmy name is\"\n" +
+				"\\s+actual\\s+: \"what,\\\\nmy name is\"[\u00A0\\s]+string\\(\n" +
+				"\\s+-[\u00A0\\s]+\"hi, \\\\nmy name is\",\n" +
+				"\\s+\\+[\u00A0\\s]+\"what,\\\\nmy name is\",\n" +
+				"[\u00A0\\s]+\\)",
+		},
 	} {
 		mockT := &bufferT{}
 		Equal(mockT, currCase.equalWant, currCase.equalGot, currCase.msgAndArgs...)
-		Regexp(t, regexp.MustCompile(currCase.want), mockT.buf.String(), "Case %d", i)
+		s := mockT.buf.String()
+		Regexp(t, regexp.MustCompile(currCase.want), s, "Case %d", i)
 	}
 }
 
@@ -369,10 +379,52 @@ func TestEqualFormatting(t *testing.T) {
 		msgAndArgs []interface{}
 		want       string
 	}{
-		{equalWant: "want", equalGot: "got", want: "\tassertions.go:\\d+: \n\t+Error Trace:\t\n\t+Error:\\s+Not equal:\\s+\n\\s+expected: \"want\"\n\\s+actual\\s+: \"got\"\n\\s+Diff:\n\\s+-+ Expected\n\\s+\\++ Actual\n\\s+@@ -1 \\+1 @@\n\\s+-want\n\\s+\\+got\n"},
-		{equalWant: "want", equalGot: "got", msgAndArgs: []interface{}{"hello, %v!", "world"}, want: "\tassertions.go:[0-9]+: \n\t+Error Trace:\t\n\t+Error:\\s+Not equal:\\s+\n\\s+expected: \"want\"\n\\s+actual\\s+: \"got\"\n\\s+Diff:\n\\s+-+ Expected\n\\s+\\++ Actual\n\\s+@@ -1 \\+1 @@\n\\s+-want\n\\s+\\+got\n\\s+Messages:\\s+hello, world!\n"},
-		{equalWant: "want", equalGot: "got", msgAndArgs: []interface{}{123}, want: "\tassertions.go:[0-9]+: \n\t+Error Trace:\t\n\t+Error:\\s+Not equal:\\s+\n\\s+expected: \"want\"\n\\s+actual\\s+: \"got\"\n\\s+Diff:\n\\s+-+ Expected\n\\s+\\++ Actual\n\\s+@@ -1 \\+1 @@\n\\s+-want\n\\s+\\+got\n\\s+Messages:\\s+123\n"},
-		{equalWant: "want", equalGot: "got", msgAndArgs: []interface{}{struct{ a string }{"hello"}}, want: "\tassertions.go:[0-9]+: \n\t+Error Trace:\t\n\t+Error:\\s+Not equal:\\s+\n\\s+expected: \"want\"\n\\s+actual\\s+: \"got\"\n\\s+Diff:\n\\s+-+ Expected\n\\s+\\++ Actual\n\\s+@@ -1 \\+1 @@\n\\s+-want\n\\s+\\+got\n\\s+Messages:\\s+{a:hello}\n"},
+		{
+			equalWant: "want",
+			equalGot:  "got",
+			want: "\tassertions.go:\\d+: \n\t+Error Trace:\t\n\t+Error:\\s+Not equal:\\s+\n" +
+				"\\s+expected: \"want\"\n" +
+				"\\s+actual\\s+: \"got\"[\u00A0\\s]+string\\(\n" +
+				"\\s+-[\u00A0\\s]+\"want\",\n" +
+				"\\s+\\+[\u00A0\\s]+\"got\",\n" +
+				"[\u00A0\\s]+\\)",
+		},
+		{
+			equalWant:  "want",
+			equalGot:   "got",
+			msgAndArgs: []interface{}{"hello, %v!", "world"},
+			want: "\tassertions.go:\\d+: \n\t+Error Trace:\t\n\t+Error:\\s+Not equal:\\s+\n" +
+				"\\s+expected: \"want\"\n" +
+				"\\s+actual\\s+: \"got\"[\u00A0\\s]+string\\(\n" +
+				"\\s+-[\u00A0\\s]+\"want\",\n" +
+				"\\s+\\+[\u00A0\\s]+\"got\",\n" +
+				"[\u00A0\\s]+\\)\n" +
+				"\\s+Messages:[\u00A0\\s]+hello, world!\n",
+		},
+		{
+			equalWant:  "want",
+			equalGot:   "got",
+			msgAndArgs: []interface{}{123},
+			want: "\tassertions.go:\\d+: \n\t+Error Trace:\t\n\t+Error:\\s+Not equal:\\s+\n" +
+				"\\s+expected: \"want\"\n" +
+				"\\s+actual\\s+: \"got\"[\u00A0\\s]+string\\(\n" +
+				"\\s+-[\u00A0\\s]+\"want\",\n" +
+				"\\s+\\+[\u00A0\\s]+\"got\",\n" +
+				"[\u00A0\\s]+\\)\n" +
+				"\\s+Messages:[\u00A0\\s]+123\n",
+		},
+		{
+			equalWant:  "want",
+			equalGot:   "got",
+			msgAndArgs: []interface{}{struct{ a string }{"hello"}},
+			want: "\tassertions.go:\\d+: \n\t+Error Trace:\t\n\t+Error:\\s+Not equal:\\s+\n" +
+				"\\s+expected: \"want\"\n" +
+				"\\s+actual\\s+: \"got\"[\u00A0\\s]+string\\(\n" +
+				"\\s+-[\u00A0\\s]+\"want\",\n" +
+				"\\s+\\+[\u00A0\\s]+\"got\",\n" +
+				"[\u00A0\\s]+\\)\n" +
+				"\\s+Messages:[\u00A0\\s]+\\{a:hello\\}",
+		},
 	} {
 		mockT := &bufferT{}
 		Equal(mockT, currCase.equalWant, currCase.equalGot, currCase.msgAndArgs...)
@@ -1998,7 +2050,13 @@ func TestTimeEqualityErrorFormatting(t *testing.T) {
 
 	Equal(mockT, time.Second*2, time.Millisecond)
 
-	expectedErr := "\\s+Error Trace:\\s+Error:\\s+Not equal:\\s+\n\\s+expected: 2s\n\\s+actual\\s+: 1ms\n"
+	expectedErr := "\t+Error Trace:\t\n\t+Error:\\s+Not equal:\\s+\n" +
+		"\\s+expected: 2s\n" +
+		"\\s+actual\\s+: 1ms[\u00A0\\s]+time.Duration\\(\n" +
+		"\\s+-[\u00A0\\s]+s\"2s\",\n" +
+		"\\s+\\+[\u00A0\\s]+s\"1ms\",\n" +
+		"[\u00A0\\s]+\\)\n"
+
 	Regexp(t, regexp.MustCompile(expectedErr), mockT.errorString())
 }
 
